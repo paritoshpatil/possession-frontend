@@ -149,16 +149,7 @@ export default function Items() {
 			{
 				doItemsExist &&
 				<div className="relative w-full h-[86%] mb-4">
-					<Search className="absolute left-2.5 top-2.5 h-4 w-4" />
-					<Input
-						type="search"
-						placeholder="Search items..."
-						className="w-full appearance-none pl-8 shadow-none mb-4"
-					/>
-					{/* <div className="relative items-container-full w-full h-full max-h-full overflow-scroll shadow-lg shadow-muted-foreground/20 rounded-lg text-foreground p-4 mt-4 border border-muted-foreground/40">
- 					</div> */}
 					 <DataTable columns={columns} data={itemsData}/>
-
 				</div>
 			}
 

@@ -162,6 +162,9 @@ h1 {
   padding: 5% 15%;
 }
 
+.locations-grid {
+}
+
 .location-col-span-1 {
   grid-column: span 1 / span 1;
 }
@@ -193,8 +196,6 @@ h1 {
 .location-row-span-6 {
   grid-row: span 6 / span 6;
 }
-
-
 
 @layer base {
   * {

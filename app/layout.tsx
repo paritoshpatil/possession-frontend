@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${inconsolata.variable}`}>
+      <body className={`${inter.variable} ${inconsolata.variable} `}>
         {/* <Providers> */}
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <NavBar />

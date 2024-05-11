@@ -1,7 +1,8 @@
 import React from 'react'
 import { Item } from '../items/page'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-
+import { Dialog, DialogContent, DialogHeader, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 export default function Locations() {
     const itemsData: Item[] = [
         {
@@ -158,31 +159,53 @@ export default function Locations() {
     locations.set("Washroom", 4)
 
     function getColspanFromItems(count: number): string {
-        if (count < 5) return "2"
-        else if (count > 5 && count < 10) return "3"
+        if (count < 1) return "0"
+        else if (count > 0 && count < 10) return "3"
         else if (count > 10 && count < 20) return "4"
         else return "6"
+    }
+
+    function getRowspanFromItems(count: number): string {
+        if (count < 1) return "0"
+        else if (count > 0 && count < 10) return "1"
+        else if (count > 10 && count < 20) return "1"
+        else return "2"
     }
 
     return (
         <main className='w-screen items-main bg-muted/40'>
             <h1 className="text-5xl text-foreground font-bold mb-4">Locations</h1>
-            <div className="w-full grid grid-cols-12 grid-rows-12 gap-4">
+            <div className="w-full grid grid-cols-12 grid-rows-auto gap-4 locations-grid">
                 {
                     Array.from(locations.keys()).map(key => {
                         return (
-                            // <div className={`border border-solid border-muted-foreground location-col-span-${getColspanFromItems(locations.get(key))}`}>
-                            //     {key}
-                            // </div>
-
-                            <Card className={`location-col-span-${getColspanFromItems(locations.get(key))} location-row-span-${getColspanFromItems(locations.get(key))}`}>
-                                <CardHeader>
-                                    <CardTitle>{key}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p>{`item count: ${locations.get(key)}`}</p>
-                                </CardContent>
-                            </Card>
+                            <Dialog>
+                                    <Card className={`location-col-span-${getColspanFromItems(locations.get(key))} location-row-span-${getRowspanFromItems(locations.get(key))} flex flex-col`}>
+                                        <CardHeader>
+                                            <CardTitle>{key}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <ul>
+                                                <li>{`${locations.get(key)} items`}</li>
+                                                <li>{`${locations.get(key)} containers`}</li>
+                                            </ul>
+                                        </CardContent>
+                                        <CardFooter className='mt-auto flex justify-between'>
+                                            <DialogTrigger asChild>
+                                                <Button>details</Button>
+                                            </DialogTrigger>
+                                        </CardFooter>
+                                    </Card>
+                                
+                                <DialogContent>
+                                    <DialogHeader>
+                                        {key}
+                                    </DialogHeader>
+                                    <DialogDescription>
+                                        containers in {key}
+                                    </DialogDescription>
+                                </DialogContent>
+                            </Dialog>
                         )
                     })
                 }

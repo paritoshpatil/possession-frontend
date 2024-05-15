@@ -1,0 +1,1 @@
+export const locationIDToName: Map<number, string> = new Map([[1, "Bedroom"], [2, "Living Room"]])

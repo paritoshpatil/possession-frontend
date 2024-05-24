@@ -3,10 +3,18 @@ import React from 'react'
 import { DataTable } from './data-table';
 import { columns } from './columns';
 import {itemsData} from "@/data/items-data";
+import {createClient} from "@/lib/supabaseServer";
+import {redirect} from "next/navigation";
 
-export default function Items() {
-	var doItemsExist: boolean = true;
+export default async function Items() {
+	let doItemsExist: boolean = true;
+	const supabase = createClient()
 
+	const {data: {user}} = await supabase.auth.getUser()
+
+	if(!user) {
+		redirect("/login")
+	}
 	return (
 		<main className='w-screen h-screen items-main bg-muted/40'>
 			<h1 className="text-5xl text-foreground font-bold mb-4">Items</h1>

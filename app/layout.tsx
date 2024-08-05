@@ -1,10 +1,9 @@
 'use client'
-import type { Metadata } from "next";
 import { Inter, Inconsolata } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/navBar";
-import Providers from "./providers";
 import { ThemeProvider } from "./themeProvider";
+import {Toaster} from "@/components/ui/sonner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,6 +32,7 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             <NavBar />
             {children}
+              <Toaster richColors closeButton position="bottom-center" />
           </ThemeProvider>
         {/* </Providers> */}
       </body>

@@ -4,14 +4,48 @@ import NavLink, { NavLinkType } from './navLink';
 import { Ghost, Paintbrush } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTheme } from 'next-themes';
-import { usePathname } from 'next/navigation';
+import {usePathname, useRouter} from 'next/navigation';
+import {logout, getUser, revalidate} from "@/app/login/actions";
+import {userStore} from "@/lib/userStore";
 
 export default function NavBar() {
-	const {theme, setTheme} = useTheme()	  
+	const {theme, setTheme} = useTheme()
+
+	const {user, setUser, isLoggedIn, setIsLoggedIn} = userStore((state: any) => state)
+	const router = useRouter()
+
+	async function getUserFromDB() {
+		const response = await getUser()
+		if(response.success && response.data) {
+			setUser(response['data'])
+			setIsLoggedIn(true)
+		}
+	}
+
+	async function logoutFromDB() {
+		const success = await logout()
+		if(success) {
+			setUser(null)
+			setIsLoggedIn(false)
+			revalidate()
+			router.push('/login')
+		}
+		else {
+			revalidate()
+			router.push('/error')
+		}
+	}
+
+	useEffect(() => {
+		getUserFromDB()
+	}, [])
+
 	function toggleTheme() {
 		if(theme == 'light') setTheme('dark')
 		else if(theme == 'dark') setTheme('light')
 	}
+
+
 	const links: NavLinkType[] = [
 		{
 			link: "home",
@@ -27,7 +61,8 @@ export default function NavBar() {
 		}
 	]
 
-	var initialActiveLink: any = links.find(link => link.href == usePathname())
+	var currentPath : string = usePathname()
+	var initialActiveLink: any = links.find(link => link.href == currentPath)
 	const [activeLink, setActiveLink] = useState(initialActiveLink ? initialActiveLink.link : links[0].link);
 
 	const handleLinkClick = (event: any) => {
@@ -45,10 +80,30 @@ export default function NavBar() {
 					})
 				}
 			</div>
-			<div className="flex items-center">
+			<div className="flex items-center gap-4">
+				{
+					isLoggedIn ?
+						(<p>Hello, {user.user_metadata?.full_name ? user.user_metadata.full_name : user.email}</p>)
+					:
+						(<p>Login to continue</p>)
+				}
+
+				{
+					isLoggedIn ?
+						(<Button onClick={() => logoutFromDB()}>
+							Logout
+						</Button>)
+					:
+						(<Button>
+							<Link href={"/login"}>Login</Link>
+						</Button>)
+				}
+				
 				<Button onClick={() => toggleTheme()} variant="ghost">
 					<Paintbrush width={20} height={20}/>
 				</Button>
+
+
 			</div>
         </nav>
 

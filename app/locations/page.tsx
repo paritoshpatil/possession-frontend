@@ -15,32 +15,31 @@ import {
 } from "lucide-react";
 import {Input} from "@/components/ui/input";
 import {motion} from "framer-motion";
-import {addLocation, getLocations} from "@/data/db-actions";
+import {addContainer, addLocation, getAllContainers, getLocations} from "@/data/db-actions";
 import {toast} from "sonner";
 import {userStore} from "@/lib/userStore";
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
+import {PopoverArrow} from "@radix-ui/react-popover";
 
 export default function Locations() {
 
     const [inputExpanded, setInputExpanded] = useState(false)
-    const [inputValue, setInputValue] = useState("")
+    const [locationInputValue, setLocationInputValue] = useState("")
     const [addLocationButtonLoading, setAddLocationButtonLoading] = useState(false)
+
+    const [containerInputValue, setContainerInputValue] = useState("")
+    const [addContainerButtonLoading, setAddContainerButtonLoading] = useState(false)
+
     const [locations, setLocations] = useState([])
+    const [containers, setContainers] = useState([])
+
     const inputRef = useRef<any>(null)
+
     const {user} = userStore()
-
-
-    // var locations = new Map()
-    // itemsData.forEach((item: Item) => {
-    //     if (!locations.get(item.locationId)) {
-    //         locations.set(item.locationId, 1)
-    //     }
-    //     else {
-    //         locations.set(item.locationId, locations.get(item.locationId) + 1)
-    //     }
-    // })
 
     useEffect(() => {
         getLocationsForUser()
+        getAllContainersForUser()
     }, [user])
 
     async function getLocationsForUser() {
@@ -51,6 +50,17 @@ export default function Locations() {
             console.log("locations retrieved")
             console.log(response.data)
             setLocations(response.data)
+        }
+    }
+
+    async function getAllContainersForUser() {
+        console.log("user")
+        console.log(user?.id)
+        var response = await getAllContainers(user?.id)
+        if(response.success) {
+            console.log("containers retrieved")
+            console.log(response.data)
+            setContainers(response.data)
         }
     }
 
@@ -91,11 +101,11 @@ export default function Locations() {
 
         else {
             setAddLocationButtonLoading(true)
-            let response = await addLocation(inputValue, user?.id)
+            let response = await addLocation(locationInputValue, user?.id)
             setAddLocationButtonLoading(false)
             if(response.success) {
                 setInputExpanded(false)
-                setInputValue("")
+                setLocationInputValue("")
                 toast.success(response.message, {duration: 3000})
                 getLocationsForUser()
             }
@@ -107,7 +117,27 @@ export default function Locations() {
 
     function hideAndClearInput() {
         setInputExpanded(false)
-        setInputValue("")
+        setLocationInputValue("")
+    }
+
+    async function addContainerToLocation(e, locationId: string) {
+        e.preventDefault()
+        setAddContainerButtonLoading(true)
+        let response = await addContainer(containerInputValue, locationId, user?.id)
+        setAddContainerButtonLoading(false)
+        if(response && response.success) {
+            toast.success(response.message, {duration: 3000})
+            setContainerInputValue("")
+            getLocationsForUser()
+            getAllContainersForUser()
+        }
+        else {
+            toast.error(response.message, {duration: 3000})
+        }
+    }
+
+    function getContainersForLocation(locationId: string) {
+        return containers.filter(container => container.location_id === locationId)
     }
 
     return (
@@ -134,8 +164,8 @@ export default function Locations() {
                         <Input className="w-full"
                                placeholder="add a room name"
                                ref={inputRef}
-                               onChange={(e ) => setInputValue(e.target.value)}
-                               value={inputValue}
+                               onChange={(e ) => setLocationInputValue(e.target.value)}
+                               value={locationInputValue}
                                />
                     </motion.div>
 
@@ -173,32 +203,86 @@ export default function Locations() {
                     locations.map(location => {
                         var key : string = location.name || "Unnamed Room"
                         const Icon = getIconForRoom(key)
+                        const containersForLocation = getContainersForLocation(location.id)
+                        const colSpan = getColspanFromItems(containersForLocation.length*2) // TODO: change to itemcount later
+                        const rowSpan = getRowspanFromItems(containersForLocation.length*2) // TODO: change to itemcount later
                         return (
                             <Dialog key={key}>
-                                    <Card className={`location-col-span-${getColspanFromItems(1)} location-row-span-${getRowspanFromItems(1)} flex flex-col`}>
+                                    <Card className={`location-col-span-${colSpan} location-row-span-${rowSpan} flex flex-col`}>
                                         <CardHeader className="flex flex-row justify-between items-center">
                                             <CardTitle>{key}</CardTitle>
                                             <Icon className="w-8 h-8"/>
                                         </CardHeader>
                                         <CardContent>
                                             <ul>
-                                                <li>{`${location.id} items`}</li>
-                                                <li>{`${location.id} containers`}</li>
+                                                <li>{`0 items`}</li>
+                                                <li>{`${containersForLocation.length} container(s)`}</li>
                                             </ul>
                                         </CardContent>
                                         <CardFooter className='mt-auto flex justify-between'>
                                             <DialogTrigger asChild>
                                                 <Button>details</Button>
                                             </DialogTrigger>
+
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="outline"
+                                                            className="flex flex-row items-center gap-2">
+                                                        <LucidePlus className="w-6 h-6"/>
+                                                        {   parseInt(colSpan) > 2 &&
+                                                            'container'
+                                                        }
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent
+                                                    className="flex flex-col gap-2 w-80 p-4 shadow-lg shadow-foreground/10">
+
+                                                    <h4 className="font-medium leading-none">new container</h4>
+                                                    <p className="text-sm text-muted-foreground mb-4">
+                                                        add a new container to <span className="text-orange-500">{location.name}</span>
+                                                    </p>
+                                                    <form className="flex flex-col gap-2 justify-center" onSubmit={(e) =>addContainerToLocation(e, location.id)}>
+                                                        <Input
+                                                            placeholder="container name"
+                                                            className="w-full mb-2"
+                                                            onChange={(e) => setContainerInputValue(e.target.value)}
+                                                            value={containerInputValue}
+                                                        />
+                                                        <Button variant="default" type="submit">
+                                                            {
+                                                                addContainerButtonLoading ?
+                                                                    <Loader2 className="w-6 h-6 animate-spin"/>
+                                                                    :
+                                                                    <LucidePlus className="w-6 h-6"/>
+                                                            }
+                                                            add
+                                                        </Button>
+                                                    </form>
+                                                    <p className="text-sm text-muted-foreground mt-4">
+                                                        click outside the popover or press escape to cancel
+                                                    </p>
+                                                </PopoverContent>
+                                            </Popover>
                                         </CardFooter>
                                     </Card>
-                                
+
                                 <DialogContent>
-                                    <DialogHeader>
+                                    <DialogHeader className="text-orange-500">
                                         {key}
                                     </DialogHeader>
                                     <DialogDescription>
                                         containers in {key}
+                                        <ol className="list-decimal list-inside mt-4">
+                                        {
+                                            containersForLocation.map(container => {
+                                                return (
+                                                    <li key={container.id}>
+                                                        {container.name}
+                                                    </li>
+                                                )
+                                            })
+                                        }
+                                        </ol>
                                     </DialogDescription>
                                 </DialogContent>
                             </Dialog>

@@ -1,3 +1,4 @@
+'use server'
 import { Button } from '@/components/ui/button';
 import React from 'react'
 import { DataTable } from './data-table';
@@ -5,6 +6,16 @@ import { columns } from './columns';
 import {itemsData} from "@/data/items-data";
 import {createClient} from "@/lib/supabaseServer";
 import {redirect} from "next/navigation";
+import {LucidePlus} from "lucide-react";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger
+} from "@/components/ui/dialog";
+import NewItemDialog from "@/app/items/new-item-dialog";
 
 export default async function Items() {
 	let doItemsExist: boolean = true;
@@ -17,7 +28,25 @@ export default async function Items() {
 	}
 	return (
 		<main className='w-screen h-screen items-main bg-muted/40'>
-			<h1 className="text-5xl text-foreground font-bold mb-4">Items</h1>
+			<Dialog>
+			<div className="flex flex-row justify-between items-center">
+				<h1 className="text-5xl text-foreground font-bold mb-4">Items</h1>
+				<DialogTrigger asChild>
+					<Button className="mt-4" variant="default">
+						<LucidePlus className="w-5 h-5 mr-2"/>
+						Add a new item
+					</Button>
+				</DialogTrigger>
+				<DialogContent className="min-w-[800px]">
+					<DialogHeader>
+						<DialogTitle>Add new item</DialogTitle>
+						<DialogDescription>
+							Mandatory fields are marked with an <span className="text-orange-500">asterisk*</span>
+						</DialogDescription>
+					</DialogHeader>
+					<NewItemDialog/>
+				</DialogContent>
+			</div>
 			{
 				doItemsExist 
 				? 
@@ -31,6 +60,7 @@ export default async function Items() {
 					<Button className="mt-4" variant="default">Add Item</Button>
 				</div>
 			}
+			</Dialog>
 		</main>
 	)
 }

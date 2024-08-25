@@ -43,12 +43,8 @@ export default function Locations() {
     }, [user])
 
     async function getLocationsForUser() {
-        console.log("user")
-        console.log(user?.id)
         var response = await getLocations(user?.id)
         if(response.success) {
-            console.log("locations retrieved")
-            console.log(response.data)
             setLocations(response.data)
         }
     }
@@ -58,8 +54,6 @@ export default function Locations() {
         console.log(user?.id)
         var response = await getAllContainers(user?.id)
         if(response.success) {
-            console.log("containers retrieved")
-            console.log(response.data)
             setContainers(response.data)
         }
     }
@@ -79,18 +73,18 @@ export default function Locations() {
         else return LucideGhost;
     }
 
-    function getColspanFromItems(count: number): string {
-        if (count < 1) return "1"
-        else if (count > 0 && count < 10) return "3"
-        else if (count > 10 && count < 20) return "4"
-        else return "6"
+    function getColspanFromItems(count: number): number {
+        if (count < 1) return 1
+        else if (count > 0 && count < 10) return 3
+        else if (count > 10 && count < 20) return 4
+        else return 6
     }
 
-    function getRowspanFromItems(count: number): string {
-        if (count < 1) return "1"
-        else if (count > 0 && count < 10) return "1"
-        else if (count > 10 && count < 20) return "1"
-        else return "2"
+    function getRowspanFromItems(count: number): number {
+        if (count < 1) return 1
+        else if (count > 0 && count < 10) return 1
+        else if (count > 10 && count < 20) return 1
+        else return 2
     }
 
     async function expandAndFocusInput() {
@@ -204,11 +198,11 @@ export default function Locations() {
                         var key : string = location.name || "Unnamed Room"
                         const Icon = getIconForRoom(key)
                         const containersForLocation = getContainersForLocation(location.id)
-                        const colSpan = getColspanFromItems(containersForLocation.length*2) // TODO: change to itemcount later
-                        const rowSpan = getRowspanFromItems(containersForLocation.length*2) // TODO: change to itemcount later
+                        const colSpan = getColspanFromItems((containersForLocation.length)*2).toString() // TODO: change to itemcount later
+                        const rowSpan = getRowspanFromItems((containersForLocation.length)*2).toString() // TODO: change to itemcount later
                         return (
                             <Dialog key={key}>
-                                    <Card className={`location-col-span-${colSpan} location-row-span-${rowSpan} flex flex-col`}>
+                                    <Card className={`location-col-span-${colSpan} location-row-span-${rowSpan} flex flex-col min-w-40`}>
                                         <CardHeader className="flex flex-row justify-between items-center">
                                             <CardTitle>{key}</CardTitle>
                                             <Icon className="w-8 h-8"/>

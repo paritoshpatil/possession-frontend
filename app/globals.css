@@ -147,6 +147,11 @@ h1 {
   animation-name: slideUp;
 }
 
+td {
+  font-family: var(--font-inconsolata);
+  font-size: 1rem;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;

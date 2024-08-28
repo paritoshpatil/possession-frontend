@@ -13,16 +13,29 @@ import {format} from "date-fns";
 import {cn} from "@/lib/utils";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {userStore} from "@/lib/userStore";
-import {getContainersForLocation, getLocations} from "@/data/db-actions";
+import {
+    addCategories,
+    addCategory, additem,
+    getCategoriesForUser,
+    getContainersForLocation,
+    getLocations
+} from "@/data/db-actions";
+import {Badge} from "@/components/ui/badge";
+import {Skeleton} from "@/components/ui/skeleton";
+import {toast} from "sonner";
+import {Item, ItemRow} from "@/models/item";
 
-export default function NewItemDialog() {
+export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: ItemRow) => void}) {
     const {user} = userStore()
 
     const [locations, setLocations] = useState([])
     const [containers, setContainers] = useState([])
+    const [categories, setCategories] = useState([])
+    const [selectedCategory, setSelectedCategory] = useState(-1)
 
     useEffect(() => {
         getLocationsForUser()
+        getCategories()
     }, [user])
 
     async function getLocationsForUser() {
@@ -30,13 +43,26 @@ export default function NewItemDialog() {
         if(response.success) {
             setLocations(response.data)
         }
+        else {
+            toast.error(response.message, {duration: 3000})
+        }
+    }
+
+    async function getCategories() {
+        var response = await getCategoriesForUser(user?.id)
+        if(response.success) {
+            setCategories(response.data)
+        }
+        else {
+            toast.error(response.message, {duration: 3000})
+        }
     }
 
     const itemFormSchema = z.object({
         name: z.string().min(1).max(50, "Name must be between 1 and 50 characters"),
         description: z.string().min(1).max(500).optional().nullish(),
         purchaseDate: z.date().optional(),
-        originalPrice: z.number().min(0).optional(),
+        originalPrice: z.coerce.number().min(0).optional(),
         warrantyInfo: z.string().min(1).max(500).optional().nullish(),
         categoryId: z.string().min(1).max(1000).optional().nullish(),
         locationId: z.string().min(1).max(1000),
@@ -55,17 +81,71 @@ export default function NewItemDialog() {
     })
 
     const locationChanged = (e: any) => {
+        console.log(e)
         getContainersForLocation(e, user?.id).then(response => {
-            if(response.success) {
-                setContainers(response.data)
-            }
+            setContainers(response.data)
         })
     }
 
-    function onSubmit(values: z.infer<typeof itemFormSchema>) {
-        // Do something with the form values.
-        // ✅ This will be type-safe and validated.
+    const toggleCategory = (categoryName: number) => {
+        if(selectedCategory === categoryName) {
+            setSelectedCategory(-1)
+        } else {
+            setSelectedCategory(categoryName)
+        }
+    }
+
+    const createNewCategory = async (categoryName: string) => {
+        var response = await addCategory(categoryName, user?.id)
+
+        if(response.success) {
+            console.log(response.data)
+            return response.data[0].id
+        }
+        else {
+            toast.error(response.message, {duration: 3000})
+            return -1
+        }
+    }
+
+    async function onSubmit(values: z.infer<typeof itemFormSchema>) {
         console.log(values)
+        if(values.categoryId && values.categoryId.length > 0) {
+            var newCategoryID = await createNewCategory(values.categoryId)
+        }
+
+        const newItem: Item = {
+            name: values.name,
+            description: values.description ? values.description : "",
+            purchase_date: values.purchaseDate ? values.purchaseDate : new Date(),
+            original_price: values.originalPrice ? values.originalPrice : 0,
+            warranty_info: values.warrantyInfo ? values.warrantyInfo : "",
+            category_id: newCategoryID >= 0 ? newCategoryID : selectedCategory,
+            location_id: values.locationId ? parseInt(values.locationId) : -1,
+            container_id: values.containerId ? parseInt(values.containerId) : -1
+        }
+
+        console.log("ITEM TO ADD: ")
+        console.log(newItem)
+
+
+        const response = await additem(newItem, user?.id)
+        if(response.success && response.data) {
+            // optimistically add the item to the table
+            response.data[0].category_name = response.data[0].categories.name
+            response.data[0].location_name = response.data[0].locations.name
+            response.data[0].container_name = response.data[0].containers.name
+
+            var newItemRow: ItemRow = response.data[0]
+            onItemAdded(newItemRow)
+
+            toast.success(response.message, {duration: 3000})
+            itemForm.reset()
+        }
+        else {
+            toast.error(response.message, {duration: 3000})
+        }
+
     }
     return(
         <Form {...itemForm}>
@@ -177,10 +257,7 @@ export default function NewItemDialog() {
                         render={({field}) => (
                             <FormItem className="w-1/2">
                                 <FormLabel>Location <span className="text-orange-500">*</span></FormLabel>
-                                <Select onValueChange={(e) => {
-                                    locationChanged(e);
-                                    field.onChange(e)
-                                }} defaultValue={field.value}>
+                                <Select onValueChange={(value) => {field.onChange(value); locationChanged(value);}} defaultValue={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select the location to place your item"/>
@@ -191,7 +268,8 @@ export default function NewItemDialog() {
                                             locations.map(location => {
                                                 return (
                                                     <SelectItem key={location.id}
-                                                                value={location.id.toString()}>{location.name}</SelectItem>
+                                                                value={location.id.toString()}
+                                                    >{location.name}</SelectItem>
                                                 )
                                             })
                                         }
@@ -210,7 +288,7 @@ export default function NewItemDialog() {
                                 <FormLabel>Container <span className="text-orange-500">*</span></FormLabel>
                                 {
                                     containers.length > 0 ?
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select a container in your location"/>
@@ -236,7 +314,55 @@ export default function NewItemDialog() {
                     />
                 </div>
 
-                    <Button variant="default" onClick={itemForm.handleSubmit(onSubmit)}>Add Item</Button>
+                <FormField
+                    control={itemForm.control}
+                    name="categoryId"
+                    render={({field}) => (
+                        <FormItem>
+                            <FormLabel>Category <span className="text-orange-500">*</span></FormLabel>
+                                <div className="flex flex-row items-start gap-2 w-full">
+                                    {
+                                        categories.length > 0 ?
+                                        <div className="w-1/2">
+                                            <p className="text-sm font-medium mb-2">Select from existing categories:</p>
+                                            <div>
+                                            {
+                                                categories.map(category => {
+                                                return (
+                                                <Badge key={category.id}
+                                                 className="w-fit hover:bg-foreground hover:text-background hover:cursor-pointer px-2 py-1 mr-2 mb-2"
+                                                 variant={selectedCategory === category.id ? "success" : "secondary"}
+                                                 onClick={() => toggleCategory(category.id)}
+                                                    >{category.name}</Badge>
+                                                    )
+                                                })
+                                            }
+                                            </div>
+                                        </div>
+                                        :
+                                        <Skeleton className="w-1/2 h-20" />
+
+
+                                    }
+                                <div className="w-6 h-32 border-l"></div>
+                                <FormControl>
+                                    <div className="w-1/2">
+                                        <p className="text-sm font-medium mb-2">Add a new category:</p>
+                                        <Input placeholder="Enter one or more categories separated by commas" {...field}
+                                            onFocus={() => setSelectedCategory(-1)}
+                                        />
+                                    </div>
+                                </FormControl>
+
+                            </div>
+                            <FormDescription>
+                                One item can have only one category, if you enter a new category, the existing category will be removed
+                            </FormDescription>
+                            <FormMessage/>
+                        </FormItem>
+                    )}
+                />
+                    <Button variant="default" className="w-full" onClick={itemForm.handleSubmit(onSubmit)}>Add Item</Button>
             </form>
         </Form>
 )

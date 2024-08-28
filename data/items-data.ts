@@ -1,4 +1,4 @@
-import {Item} from "@/app/items/page";
+import {Item} from "@/models/item";
 
 export const itemsData: Item[] = [
     {

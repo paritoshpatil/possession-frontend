@@ -1,6 +1,6 @@
 export type Container = {
-    containerId: number
+    id: number
     name: string
-    locationId: number
-    userId: string
+    location_id: number
+    user_id: string
 }

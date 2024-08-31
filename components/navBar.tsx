@@ -1,12 +1,19 @@
 import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 import NavLink, { NavLinkType } from './navLink';
-import { Ghost, Paintbrush } from 'lucide-react';
-import { Button } from './ui/button';
+import { Ghost, LogOut, Paintbrush, Trash} from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {usePathname, useRouter} from 'next/navigation';
 import {logout, getUser, revalidate} from "@/app/login/actions";
 import {userStore} from "@/lib/userStore";
+import {
+	DropdownMenu,
+	DropdownMenuContent, DropdownMenuItem, DropdownMenuItemDanger,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 
 export default function NavBar() {
 	const {theme, setTheme} = useTheme()
@@ -16,7 +23,7 @@ export default function NavBar() {
 
 	async function getUserFromDB() {
 		const response = await getUser()
-		if(response.success && response.data) {
+		if(response.success && response['data']) {
 			setUser(response['data'])
 			setIsLoggedIn(true)
 		}
@@ -81,29 +88,37 @@ export default function NavBar() {
 				}
 			</div>
 			<div className="flex items-center gap-4">
-				{
-					isLoggedIn ?
-						(<p>Hello, {user.user_metadata?.full_name ? user.user_metadata.full_name : user.email}</p>)
+                {
+                    isLoggedIn ?
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Avatar className="w-9 h-9 hover:cursor-pointer">
+								<AvatarImage src={`https://ui-avatars.com/api/?name=${user.user_metadata?.full_name ? user.user_metadata.full_name : user.email}&background=000&color=fff&size=128`}/>
+								<AvatarFallback>PR</AvatarFallback>
+							</Avatar>
+                        </DropdownMenuTrigger>
+						<DropdownMenuContent>
+							<DropdownMenuLabel>Hello, {user.user_metadata?.full_name ? user.user_metadata.full_name : user.email.split('@')[0]}</DropdownMenuLabel>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onClick={() => toggleTheme()}>
+								<Paintbrush className="mr-2 w-4 h-4"/>
+								Toggle Theme
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={() => logoutFromDB()}>
+								<LogOut className="mr-2 w-4 h-4"/>
+								Logout
+							</DropdownMenuItem>
+							<DropdownMenuItemDanger>
+								<Trash className="mr-2 w-4 h-4"/>
+								Delete Your Account
+							</DropdownMenuItemDanger>
+						</DropdownMenuContent>
+                    </DropdownMenu>
 					:
-						(<p>Login to continue</p>)
-				}
-
-				{
-					isLoggedIn ?
-						(<Button onClick={() => logoutFromDB()}>
-							Logout
-						</Button>)
-					:
-						(<Button>
-							<Link href={"/login"}>Login</Link>
-						</Button>)
-				}
-				
-				<Button onClick={() => toggleTheme()} variant="ghost">
-					<Paintbrush width={20} height={20}/>
-				</Button>
-
-
+					<span>
+						<Link href={"/login"} className="underline">login</Link> to continue
+					</span>
+                }
 			</div>
         </nav>
 

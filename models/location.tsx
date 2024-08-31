@@ -1,5 +1,5 @@
 export type Location = {
-    locationId: number
+    id: number
     name: string
-    userId: string
+    user_id: string
 }

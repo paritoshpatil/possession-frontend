@@ -6,65 +6,60 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipArrow, TooltipContent, TooltipProvider } from "@radix-ui/react-tooltip";
 import { TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-import { Check } from "lucide-react";
+import {useEffect, useState} from "react";
+import {Check, Loader2} from "lucide-react";
 import { Autocomplete, AutocompleteItem, AutocompleteSection } from "@nextui-org/react";
 import { useFilter } from "@react-aria/i18n";
 import { useListData } from "react-stately";
+import {userStore} from "@/lib/userStore";
+import {Location} from "@/models/location";
+import {Container} from "@/models/container";
+import {Category} from "@/models/category";
+import {getAllContainers, getCategoriesForUser, getContainersForLocation, getLocations} from "@/data/db-actions";
+import {toast} from "sonner";
 
 export default function Home() {
 
-  const locationSuggestionsTEMP = [
-    {
-      value: "bedroom"
-    },
-    {
-      value: "living room"
-    },
-    {
-      value: "kitchen"
-    }
-  ]
-
-  const containerSuggestionsTEMP = [
-    {
-      value: "wardrobe"
-    },
-    {
-      value: "dresser"
-    },
-    {
-      value: "main table"
-    },
-    {
-      value: "tv set"
-    },
-    {
-      value: "utensil cupboard"
-    },
-  ]
-
-  const categorySuggestionsTEMP = [
-    {
-      value: "aromatics"
-    },
-    {
-      value: "electronics"
-    },
-    {
-      value: "skincare"
-    },
-  ]
   const inputPlaceholder: string[] = ["name", "description", "category", "cost", "warranty", "location", "container"]
   const [currentColumn, setCurrentColumn] = useState(0)
   const [itemText, setItemText] = useState("");
   const [currentColumnValue, setCurrentColumnValue] = useState("")
   const { startsWith } = useFilter({ sensitivity: "base" });
+  const {user} = userStore()
+
+  const [locationSuggestions, setLocationSuggestions] = useState<Location[]>([])
+  const [containerSuggestions, setContainerSuggestions] = useState<Container[]>([])
+  const [categorySuggestions, setCategorySuggestions] = useState<Category[]>([])
+
+  useEffect(() => {
+    loadSuggestions()
+  }, [user])
+
+  async function loadSuggestions() {
+    var locations = await getLocations(user?.id)
+    if(locations.success && locations.data) {
+      setLocationSuggestions([...locations.data])
+    }
+
+    var containers = await getAllContainers(user?.id)
+    if(containers.success && containers.data) {
+      setContainerSuggestions([...containers.data])
+    }
+
+    var categories = await getCategoriesForUser(user?.id)
+    if(categories.success && categories.data) {
+      setCategorySuggestions([...categories.data])
+    }
+  }
+
+  function filterContainerSuggestionsForLocation(locationID: number) {
+    return containerSuggestions.filter(container => container.location_id === locationID)
+  }
 
   let suggestions = useListData({
-    initialItems: [{value: "start typing to see relevant suggestions"}],
-    getKey: (item) => item.value,
-    filter: (item, filterText) => item.value.startsWith(filterText)
+    initialItems: [{name: "start typing to see relevant suggestions", id: -1}],
+    getKey: (item) => item.id,
+    filter: (item, filterText) => item.name.startsWith(filterText)
   })
 
 
@@ -117,24 +112,27 @@ export default function Home() {
     if (count > 0) {
       setCurrentColumn(count)
       if (count == 2) {
-        const result = categorySuggestionsTEMP.some(element1 => suggestions.items.some(element2 => element1.value === element2.value));
+        const result = categorySuggestions.some(element1 => suggestions.items.some(element2 => element1.name === element2.name));
         if(!x && !result) {
           removeAllSuggestions()
-          suggestions.append(...categorySuggestionsTEMP)
+          suggestions.append(...categorySuggestions)
         }
       }
       else if (count == 5) {
-        const result = locationSuggestionsTEMP.some(element1 => suggestions.items.some(element2 => element1.value === element2.value));
+        const result = locationSuggestions.some(element1 => suggestions.items.some(element2 => element1.name === element2.name));
         if(!x && !result) {
           removeAllSuggestions()
-          suggestions.append(...locationSuggestionsTEMP)
+          suggestions.append(...locationSuggestions)
         }
       }
       else if (count == 6) {
-        const result = containerSuggestionsTEMP.some(element1 => suggestions.items.some(element2 => element1.value === element2.value));
+        // get id for current location
+        const locationID: number = parseInt(event.split(delimiter)[5])
+
+        const result = containerSuggestions.some(element1 => suggestions.items.some(element2 => element1.name === element2.name));
         if(!x && !result) {
           removeAllSuggestions()
-          suggestions.append(...containerSuggestionsTEMP)
+          suggestions.append(...filterContainerSuggestionsForLocation(locationID))
         }
       }
       else {
@@ -149,10 +147,10 @@ export default function Home() {
   }
 
   function removeAllSuggestions() {
-    suggestions.remove(...suggestions.items.map(item => item.value))
-    suggestions.remove(...categorySuggestionsTEMP.map(item => item.value))
-    suggestions.remove(...locationSuggestionsTEMP.map(item => item.value))
-    suggestions.remove(...containerSuggestionsTEMP.map(item => item.value))
+    suggestions.remove(...suggestions.items.map(item => item.id))
+    suggestions.remove(...categorySuggestions.map(item => item.id))
+    suggestions.remove(...locationSuggestions.map(item => item.id))
+    suggestions.remove(...containerSuggestions.map(item => item.id))
   }
 
   function itemSelectionChanged(event: any) {
@@ -182,6 +180,43 @@ export default function Home() {
         {item}
       </Badge>)
 
+  }
+
+  function performValidation() {
+    if(itemText.length < 1) {
+      toast.error("item cannot be empty")
+      return
+    }
+
+    var columns = itemText.split(delimiter)
+
+    if(columns[0].length < 1) {
+      toast.error("item name cannot be empty")
+      return
+    }
+
+    if(columns[2].length < 1) {
+      toast.error("category cannot be empty")
+      return
+    }
+
+    if(columns[5].length < 1) {
+      toast.error("location cannot be empty")
+      return
+    }
+
+    if(columns[6].length < 1) {
+      toast.error("container cannot be empty")
+      return
+    }
+
+    toast.loading("adding new item", {
+      duration: 3000
+    })
+  }
+
+  function submitItem() {
+      performValidation()
   }
 
   return (
@@ -231,11 +266,15 @@ export default function Home() {
           onSelectionChange={(event) => itemSelectionChanged(event)}
           selectedKey={""}
           // isLoading={true}
-          onKeyDown={(e: any) => e.continuePropagation()}>
+          onKeyDown={(e: any) => e.continuePropagation()}
+          onKeyUp={(e: any) => {
+            if(e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitItem()
+          }}
+          >
           {
             (suggestion) => 
-              <AutocompleteItem key={suggestion.value}>
-                {suggestion.value}
+              <AutocompleteItem key={suggestion.id} value={suggestion.id}>
+                {suggestion.name}
               </AutocompleteItem>
             
           }

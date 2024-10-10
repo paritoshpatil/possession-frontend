@@ -15,7 +15,13 @@ import {userStore} from "@/lib/userStore";
 import {Location} from "@/models/location";
 import {Container} from "@/models/container";
 import {Category} from "@/models/category";
-import {getAllContainers, getCategoriesForUser, getContainersForLocation, getLocations} from "@/data/db-actions";
+import {
+  addCategory, addContainer, addLocation,
+  getAllContainers,
+  getCategoriesForUser,
+  getContainersForLocation,
+  getLocations
+} from "@/data/db-actions";
 import {toast} from "sonner";
 
 export default function Home() {
@@ -27,6 +33,10 @@ export default function Home() {
   const { startsWith } = useFilter({ sensitivity: "base" });
   const {user} = userStore()
 
+  const [locations, setLocations] = useState<Location[]>([])
+  const [containers, setContainers] = useState<Container[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+
   const [locationSuggestions, setLocationSuggestions] = useState<Location[]>([])
   const [containerSuggestions, setContainerSuggestions] = useState<Container[]>([])
   const [categorySuggestions, setCategorySuggestions] = useState<Category[]>([])
@@ -36,19 +46,22 @@ export default function Home() {
   }, [user])
 
   async function loadSuggestions() {
-    var locations = await getLocations(user?.id)
-    if(locations.success && locations.data) {
-      setLocationSuggestions([...locations.data])
+    let response1 = await getLocations(user?.id)
+    if(response1.success && response1.data) {
+      setLocations([...response1.data])
+      setLocationSuggestions([...response1.data])
     }
 
-    var containers = await getAllContainers(user?.id)
-    if(containers.success && containers.data) {
-      setContainerSuggestions([...containers.data])
+    let response2 = await getAllContainers(user?.id)
+    if(response2.success && response2.data) {
+      setContainers([...response2.data])
+      setContainerSuggestions([...response2.data])
     }
 
-    var categories = await getCategoriesForUser(user?.id)
-    if(categories.success && categories.data) {
-      setCategorySuggestions([...categories.data])
+    let response3 = await getCategoriesForUser(user?.id)
+    if(response3.success && response3.data) {
+      setCategories([...response3.data])
+      setCategorySuggestions([...response3.data])
     }
   }
 
@@ -182,7 +195,7 @@ export default function Home() {
 
   }
 
-  function performValidation() {
+  async function performValidation() {
     if(itemText.length < 1) {
       toast.error("item cannot be empty")
       return
@@ -210,9 +223,64 @@ export default function Home() {
       return
     }
 
-    toast.loading("adding new item", {
-      duration: 3000
-    })
+    let newLocationName: string = "";
+    let newContainerName: string = "";
+    let newCategoryName: string = "";
+
+    // if(isNaN(parseInt(columns[6]))) newContainerName = columns[6]
+    // if(isNaN(parseInt(columns[2]))) newCategoryName = columns[2]
+    // if(isNaN(parseInt(columns[5]))) newLocationName = columns[5]
+
+    if(!containers.find((container: { id: number; }) => container.id === parseInt(columns[6]))) newContainerName = columns[6]
+    if(!categories.find((category: { id: number; }) => category.id === parseInt(columns[2]))) newCategoryName = columns[2]
+    if(!locations.find((location: { id: number; }) => location.id === parseInt(columns[5]))) newLocationName = columns[5]
+
+    if(newContainerName.length > 1 || newCategoryName.length > 1 || newLocationName.length > 1) await createNewMetadata(newContainerName, newCategoryName, newLocationName, newLocationName.length > 1 ? "" : columns[5])
+  }
+
+  async function createNewMetadata(newContainerName: string, newCategoryName: string, newLocationName: string, locationID: string) {
+    let newCategoryID: string = ""
+    let newLocationID: string = ""
+    let newContainerID: string = ""
+
+    const loadingToastID = toast.loading(`generating new categories, locations and containers`, { duration: 300 })
+    if(newCategoryName.length > 1) {
+        debugger;
+          let response1 = await addCategory(newCategoryName, user?.id)
+        if(response1.success && response1.data) {
+          toast.success(`created category ${newCategoryName}`)
+          newCategoryID = response1.data[0].id
+        }
+        else {
+          toast.error(response1.message)
+        }
+    }
+
+    if(newLocationName.length > 1) {
+      let response2 = await addLocation(newLocationName, user?.id)
+      if(response2.success && response2.data) {
+        toast.success(`created location ${newLocationName}`)
+        newLocationID = response2.data[0].id
+        locationID = response2.data[0].id
+      }
+      else {
+        toast.error(response2.message)
+      }
+    }
+
+    if(newContainerName.length > 1) {
+      let response3 = await addContainer(newContainerName, locationID, user?.id)
+      if(response3.success && response3.data) {
+        toast.success(`created container ${newContainerName}`)
+        newContainerID = response3.data[0].id
+      }
+      else {
+        toast.error(response3.message)
+      }
+    }
+
+    toast.dismiss(loadingToastID)
+
   }
 
   function submitItem() {
@@ -268,7 +336,8 @@ export default function Home() {
           // isLoading={true}
           onKeyDown={(e: any) => e.continuePropagation()}
           onKeyUp={(e: any) => {
-            if(e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitItem()
+            e.continuePropagation();
+            if(e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitItem();
           }}
           >
           {

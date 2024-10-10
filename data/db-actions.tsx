@@ -2,6 +2,9 @@
 
 import { createClient } from '@/lib/supabaseServer'
 import {Item} from "@/models/item";
+import {Container} from "@/models/container";
+import {Category} from "@/models/category";
+import {Location} from "@/models/location";
 
 export async function addLocation(name: string, userId: string) {
     if(!name || name.length < 1 || !userId || userId.length < 1)
@@ -12,12 +15,13 @@ export async function addLocation(name: string, userId: string) {
 
     const supabase = createClient()
 
-    const {error} = await supabase.from('locations').insert([
+    const {data, error} = await supabase.from('locations').insert([
         {
             name: name,
             user_id: userId
         }
     ])
+        .select()
 
     if (error) {
         return {
@@ -28,11 +32,12 @@ export async function addLocation(name: string, userId: string) {
 
     return {
         success: true,
-        message: `Location added: ${name}`
+        message: `Location added: ${name}`,
+        data: data
     }
 }
 
-export async function getLocations(userId: string) {
+export async function getLocations(userId: string) : Promise<{success: boolean, message: string, data?: Location[]}> {
     if(!userId || userId.length < 1)
         return {
             success: false,
@@ -72,13 +77,14 @@ export async function addContainer(name: string, locationId: string, userId: str
 
     const supabase = createClient()
 
-    const {error} = await supabase.from('containers').insert([
+    const {data, error} = await supabase.from('containers').insert([
         {
             name: name,
             location_id: locationId,
             user_id: userId
         }
     ])
+        .select()
 
     if (error) {
         return {
@@ -89,7 +95,8 @@ export async function addContainer(name: string, locationId: string, userId: str
 
     return {
         success: true,
-        message: `Container added: ${name}`
+        message: `Container added: ${name}`,
+        data: data
     }
 }
 
@@ -123,7 +130,7 @@ export async function getContainersForLocation(locationId: string, userId: strin
     }
 }
 
-export async function getAllContainers(userId: string) {
+export async function getAllContainers(userId: string) : Promise<{success: boolean, message: string, data?: Container[]}> {
     if(!userId || userId.length < 1)
         return {
             success: false,
@@ -148,7 +155,7 @@ export async function getAllContainers(userId: string) {
     }
 }
 
-export async function getCategoriesForUser(userId: string) {
+export async function getCategoriesForUser(userId: string) : Promise<{success: boolean, message: string, data?: Category[]}> {
     if(!userId || userId.length < 1)
         return {
             success: false,

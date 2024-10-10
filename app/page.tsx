@@ -1,28 +1,27 @@
 'use client'
-import { AnimatedText } from "@/components/animatedText";
-import { Button } from "@/components/ui/button";
+import {AnimatedText} from "@/components/animatedText";
 import GlitchyText from "@/components/glitchyTest";
-import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipArrow, TooltipContent, TooltipProvider } from "@radix-ui/react-tooltip";
-import { TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+import {Badge} from "@/components/ui/badge";
 import {useEffect, useState} from "react";
-import {Check, Loader2} from "lucide-react";
-import { Autocomplete, AutocompleteItem, AutocompleteSection } from "@nextui-org/react";
-import { useFilter } from "@react-aria/i18n";
-import { useListData } from "react-stately";
+import {Check} from "lucide-react";
+import {Autocomplete, AutocompleteItem} from "@nextui-org/react";
+import {useFilter} from "@react-aria/i18n";
+import {useListData} from "react-stately";
 import {userStore} from "@/lib/userStore";
 import {Location} from "@/models/location";
 import {Container} from "@/models/container";
 import {Category} from "@/models/category";
 import {
-  addCategory, addContainer, addLocation,
+  addCategory,
+  addContainer,
+  additem,
+  addLocation,
   getAllContainers,
   getCategoriesForUser,
-  getContainersForLocation,
   getLocations
 } from "@/data/db-actions";
 import {toast} from "sonner";
+import {Item} from "@/models/item";
 
 export default function Home() {
 
@@ -226,6 +225,7 @@ export default function Home() {
     let newLocationName: string = "";
     let newContainerName: string = "";
     let newCategoryName: string = "";
+    let newMetadata = {}
 
     // if(isNaN(parseInt(columns[6]))) newContainerName = columns[6]
     // if(isNaN(parseInt(columns[2]))) newCategoryName = columns[2]
@@ -235,18 +235,21 @@ export default function Home() {
     if(!categories.find((category: { id: number; }) => category.id === parseInt(columns[2]))) newCategoryName = columns[2]
     if(!locations.find((location: { id: number; }) => location.id === parseInt(columns[5]))) newLocationName = columns[5]
 
-    if(newContainerName.length > 1 || newCategoryName.length > 1 || newLocationName.length > 1) await createNewMetadata(newContainerName, newCategoryName, newLocationName, newLocationName.length > 1 ? "" : columns[5])
+    if(newContainerName.length > 1 || newCategoryName.length > 1 || newLocationName.length > 1) {
+      return await createNewMetadata(newContainerName, newCategoryName, newLocationName, newLocationName.length > 1 ? "" : columns[5])
+    }
+
+    return false
   }
 
   async function createNewMetadata(newContainerName: string, newCategoryName: string, newLocationName: string, locationID: string) {
-    let newCategoryID: string = ""
-    let newLocationID: string = ""
-    let newContainerID: string = ""
+    let newCategoryID: number = -1
+    let newLocationID: number = -1
+    let newContainerID: number = -1
 
     const loadingToastID = toast.loading(`generating new categories, locations and containers`, { duration: 300 })
     if(newCategoryName.length > 1) {
-        debugger;
-          let response1 = await addCategory(newCategoryName, user?.id)
+        let response1 = await addCategory(newCategoryName, user?.id)
         if(response1.success && response1.data) {
           toast.success(`created category ${newCategoryName}`)
           newCategoryID = response1.data[0].id
@@ -281,10 +284,41 @@ export default function Home() {
 
     toast.dismiss(loadingToastID)
 
+    return {
+      newCategoryID: newCategoryID,
+      newLocationID: newLocationID,
+      newContainerID: newContainerID
+    }
   }
 
-  function submitItem() {
-      performValidation()
+  async function submitItem() {
+      let newMetadata = await performValidation()
+      const columns = itemText.split(delimiter)
+      let newItem: Item = {
+        name: columns[0],
+        description: columns[1],
+        category_id: newMetadata && newMetadata?.newCategoryID > -1 ? newMetadata.newCategoryID : parseInt(columns[2]),
+        original_price: parseInt(columns[3]),
+        purchase_date: new Date(),
+        warranty_info: columns[4],
+        location_id: newMetadata && newMetadata?.newLocationID > -1 ? newMetadata.newLocationID : parseInt(columns[5]),
+        container_id: newMetadata && newMetadata?.newContainerID > -1 ? newMetadata.newContainerID : parseInt(columns[6])
+      }
+
+      const loadingToastID = toast.loading(`adding item to the database`, { duration: 300 })
+      const response = await additem(newItem, user?.id)
+      if(response.success && response.data) {
+        toast.dismiss(loadingToastID)
+        toast.success(`item added to the database`)
+        setItemText("")
+        setCurrentColumn(0)
+        setCurrentColumnValue("")
+      }
+      else {
+        toast.dismiss(loadingToastID)
+        toast.error(response.message)
+      }
+
   }
 
   return (

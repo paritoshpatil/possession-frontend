@@ -9,12 +9,12 @@ type AnimatedTextProps = {
     once?: boolean;
     repeatDelay?: number;
     animation?: {
-      hidden: Variant;
-      visible: Variant;
+      hidden: any;
+      visible: any;
     };
   };
   
-  var defaultAnimations = {
+  let defaultAnimations = {
     hidden: {
       opacity: 0,
       y: 10,

@@ -14,7 +14,6 @@ import {cn} from "@/lib/utils";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {userStore} from "@/lib/userStore";
 import {
-    addCategories,
     addCategory, additem,
     getCategoriesForUser,
     getContainersForLocation,
@@ -24,13 +23,16 @@ import {Badge} from "@/components/ui/badge";
 import {Skeleton} from "@/components/ui/skeleton";
 import {toast} from "sonner";
 import {Item, ItemRow} from "@/models/item";
+import {Container} from "@/models/container";
+import {Category} from "@/models/category";
+import {Location} from "@/models/location"
 
 export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: ItemRow) => void}) {
     const {user} = userStore()
 
-    const [locations, setLocations] = useState([])
-    const [containers, setContainers] = useState([])
-    const [categories, setCategories] = useState([])
+    const [locations, setLocations] = useState<Location[]>([])
+    const [containers, setContainers] = useState<Container[]>([])
+    const [categories, setCategories] = useState<Category[]>([])
     const [selectedCategory, setSelectedCategory] = useState(-1)
 
     useEffect(() => {
@@ -39,8 +41,8 @@ export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: Ite
     }, [user])
 
     async function getLocationsForUser() {
-        var response = await getLocations(user?.id)
-        if(response.success) {
+        let response = await getLocations(user?.id ?? "")
+        if(response.success && response.data) {
             setLocations(response.data)
         }
         else {
@@ -49,8 +51,8 @@ export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: Ite
     }
 
     async function getCategories() {
-        var response = await getCategoriesForUser(user?.id)
-        if(response.success) {
+        let response = await getCategoriesForUser(user?.id ?? "")
+        if(response.success && response.data) {
             setCategories(response.data)
         }
         else {
@@ -60,30 +62,24 @@ export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: Ite
 
     const itemFormSchema = z.object({
         name: z.string().min(1).max(50, "Name must be between 1 and 50 characters"),
-        description: z.string().min(1).max(500).optional().nullish(),
-        purchaseDate: z.date().optional(),
+        description: z.string().min(1).max(500).optional(),
+        purchaseDate: z.date().optional().default(new Date()),
         originalPrice: z.coerce.number().min(0).optional(),
-        warrantyInfo: z.string().min(1).max(500).optional().nullish(),
-        categoryId: z.string().min(1).max(1000).optional().nullish(),
+        warrantyInfo: z.string().min(0).max(500).optional(),
+        categoryId: z.string().min(1).max(1000).optional(),
         locationId: z.string().min(1).max(1000),
         containerId: z.string().min(1).max(1000),
     })
 
     const itemForm = useForm<z.infer<typeof itemFormSchema>>({
-        resolver: zodResolver(itemFormSchema),
-        defaultValues: {
-            description: null,
-            originalPrice: 0,
-            warrantyInfo: null,
-            categoryId: null,
-            purchaseDate: new Date(),
-        },
+        resolver: zodResolver(itemFormSchema)
     })
 
     const locationChanged = (e: any) => {
-        console.log(e)
-        getContainersForLocation(e, user?.id).then(response => {
-            setContainers(response.data)
+        getContainersForLocation(e, user?.id ?? "").then(response => {
+            if(response.success && response.data) {
+                setContainers(response.data)
+            }
         })
     }
 
@@ -96,9 +92,9 @@ export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: Ite
     }
 
     const createNewCategory = async (categoryName: string) => {
-        var response = await addCategory(categoryName, user?.id)
+        let response = await addCategory(categoryName, user?.id ?? "")
 
-        if(response.success) {
+        if(response.success && response.data) {
             console.log(response.data)
             return response.data[0].id
         }
@@ -109,9 +105,9 @@ export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: Ite
     }
 
     async function onSubmit(values: z.infer<typeof itemFormSchema>) {
-        console.log(values)
+        let newCategoryID = -1
         if(values.categoryId && values.categoryId.length > 0) {
-            var newCategoryID = await createNewCategory(values.categoryId)
+            newCategoryID = await createNewCategory(values.categoryId)
         }
 
         const newItem: Item = {
@@ -129,14 +125,14 @@ export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: Ite
         console.log(newItem)
 
 
-        const response = await additem(newItem, user?.id)
+        const response = await additem(newItem, user?.id ?? "")
         if(response.success && response.data) {
             // optimistically add the item to the table
             response.data[0].category_name = response.data[0].categories.name
             response.data[0].location_name = response.data[0].locations.name
             response.data[0].container_name = response.data[0].containers.name
 
-            var newItemRow: ItemRow = response.data[0]
+            let newItemRow: ItemRow = response.data[0]
             onItemAdded(newItemRow)
 
             toast.success(response.message, {duration: 3000})
@@ -147,6 +143,9 @@ export default function NewItemDialog({onItemAdded}: {onItemAdded: (newItem: Ite
         }
 
     }
+    // @ts-ignore
+    // @ts-ignore
+    // @ts-ignore
     return(
         <Form {...itemForm}>
             <form onSubmit={itemForm.handleSubmit(onSubmit)} className="space-y-8">

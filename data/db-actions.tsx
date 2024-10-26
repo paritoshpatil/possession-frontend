@@ -285,5 +285,30 @@ export async function getItemsForUser(userId: string) {
    }
 }
 
+export async function getItemsForLocation(locationId: string, userId: string) {
+    if(!userId || userId.length < 1)
+        return {
+            success: false,
+            message: "user id cannot be empty"
+        }
+    const supabase = createClient()
+    const {data, error} = await supabase.from('items')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('location_id', locationId)
+
+    if (error) {
+        return {
+            success: false,
+            message: error.message
+        }
+    }
+    return {
+        success: true,
+        message: "Items retrieved",
+        data: data
+    }
+}
+
 
 

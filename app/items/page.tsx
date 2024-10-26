@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import React, {useState, useEffect, Suspense} from 'react'
 import { DataTable } from './data-table';
 import { columns } from './columns';
-import {itemsData} from "@/data/items-data";
 import {LucidePlus} from "lucide-react";
 import {
 	Dialog,
@@ -31,7 +30,7 @@ export default function Items() {
 	}
 
 	useEffect(() => {
-		getItemsForUser(user?.id).then(response => {
+		getItemsForUser(user?.id ?? "").then(response => {
 			setIsLoading(false)
 			if(response.success && response.data) {
 				response.data.forEach(item => {

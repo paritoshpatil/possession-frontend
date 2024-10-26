@@ -74,21 +74,21 @@ export function DataTable<TData, TValue>({
     const {user} = userStore()
 
     async function getLocationsForUser() {
-        var response = await getLocations(user?.id)
+        var response = await getLocations(user?.id ?? "")
         if(response.success && response.data) {
             setLocationFilter(response.data.map(location => ({ID: location.id, name: location.name, checked: false})))
         }
     }
 
     async function getContainersForUser() {
-        var response = await getAllContainers(user?.id)
+        var response = await getAllContainers(user?.id ?? "")
         if(response.success && response.data) {
             setContainerFilter(response.data.map(container => ({ID: container.id, name: container.name, checked: false})))
         }
     }
 
     async function getCategoriesForUserr() {
-        var response = await getCategoriesForUser(user?.id)
+        var response = await getCategoriesForUser(user?.id ?? "")
         if(response.success && response.data) {
             setCategoryFilter(response.data.map(category => ({ID: category.id, name: category.name, checked: false})))
         }

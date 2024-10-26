@@ -15,11 +15,13 @@ import {
 } from "lucide-react";
 import {Input} from "@/components/ui/input";
 import {motion} from "framer-motion";
-import {addContainer, addLocation, getAllContainers, getLocations} from "@/data/db-actions";
+import {addContainer, addLocation, getAllContainers, getItemsForUser, getLocations} from "@/data/db-actions";
 import {toast} from "sonner";
 import {userStore} from "@/lib/userStore";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
-import {PopoverArrow} from "@radix-ui/react-popover";
+import {Container} from "@/models/container";
+import {Item} from "@/models/item";
+import {Location} from "@/models/location";
 
 export default function Locations() {
 
@@ -30,8 +32,9 @@ export default function Locations() {
     const [containerInputValue, setContainerInputValue] = useState("")
     const [addContainerButtonLoading, setAddContainerButtonLoading] = useState(false)
 
-    const [locations, setLocations] = useState([])
-    const [containers, setContainers] = useState([])
+    const [locations, setLocations] = useState<Location[]>([])
+    const [containers, setContainers] = useState<Container[]>([])
+    const [items, setItems] = useState<Item[]>([])
 
     const inputRef = useRef<any>(null)
 
@@ -40,21 +43,27 @@ export default function Locations() {
     useEffect(() => {
         getLocationsForUser()
         getAllContainersForUser()
+        getAllItemsForUser()
     }, [user])
 
     async function getLocationsForUser() {
-        var response = await getLocations(user?.id)
-        if(response.success) {
-            setLocations(response.data)
+        let response = await getLocations(user?.id ?? "")
+        if(response.success && response.data) {
+            setLocations(response.data.sort((a, b) => { return a.item_count > b.item_count ? -1 : 1 }))
         }
     }
 
     async function getAllContainersForUser() {
-        console.log("user")
-        console.log(user?.id)
-        var response = await getAllContainers(user?.id)
-        if(response.success) {
+        let response = await getAllContainers(user?.id ?? "")
+        if(response.success && response.data) {
             setContainers(response.data)
+        }
+    }
+
+    async function getAllItemsForUser() {
+        let response = await getItemsForUser(user?.id ?? "")
+        if(response.success && response.data) {
+            setItems(response.data)
         }
     }
 
@@ -74,17 +83,13 @@ export default function Locations() {
     }
 
     function getColspanFromItems(count: number): number {
-        if (count < 1) return 1
-        else if (count > 0 && count < 10) return 3
-        else if (count > 10 && count < 20) return 4
-        else return 6
-    }
+        const maxItems = Math.max(...locations.map(location => location.item_count));
+        const ratio = count / maxItems;
 
-    function getRowspanFromItems(count: number): number {
-        if (count < 1) return 1
-        else if (count > 0 && count < 10) return 1
-        else if (count > 10 && count < 20) return 1
-        else return 2
+        if (ratio < 0.3) return 2
+        else if (ratio >= 0.3 && ratio < 0.6) return 3
+        else if (ratio >= 0.6 && ratio <= 1.0) return 4
+        else return -1
     }
 
     async function expandAndFocusInput() {
@@ -95,13 +100,13 @@ export default function Locations() {
 
         else {
             setAddLocationButtonLoading(true)
-            let response = await addLocation(locationInputValue, user?.id)
+            let response = await addLocation(locationInputValue, user?.id ?? "")
             setAddLocationButtonLoading(false)
             if(response.success) {
                 setInputExpanded(false)
                 setLocationInputValue("")
                 toast.success(response.message, {duration: 3000})
-                getLocationsForUser()
+                await getLocationsForUser()
             }
             else {
                 toast.error(response.message, {duration: 3000})
@@ -114,28 +119,33 @@ export default function Locations() {
         setLocationInputValue("")
     }
 
-    async function addContainerToLocation(e, locationId: string) {
+    async function addContainerToLocation(e: React.FormEvent<HTMLFormElement>, locationId: string) {
         e.preventDefault()
         setAddContainerButtonLoading(true)
-        let response = await addContainer(containerInputValue, locationId, user?.id)
+        let response = await addContainer(containerInputValue, locationId, user?.id ?? "")
         setAddContainerButtonLoading(false)
         if(response && response.success) {
             toast.success(response.message, {duration: 3000})
             setContainerInputValue("")
-            getLocationsForUser()
-            getAllContainersForUser()
+            await getLocationsForUser()
+            await getAllContainersForUser()
+            await getAllItemsForUser()
         }
         else {
             toast.error(response.message, {duration: 3000})
         }
     }
 
-    function getContainersForLocation(locationId: string) {
+    function getContainersForLocation(locationId: number) {
         return containers.filter(container => container.location_id === locationId)
     }
 
+    function getItemsForLocation(locationId: number) {
+        return items.filter(item => item.location_id === locationId)
+    }
+
     return (
-        <main className='w-screen h-screen items-main bg-muted/40'>
+        <main className='w-screen h-screen items-main bg-muted/40 overflow-y-auto'>
             <div className="flex flex-row justify-between items-center w-full mb-8">
                 <h1 className="text-5xl text-foreground font-bold mb-4">Locations</h1>
                 <div className="flex flex-row justify-end items-center gap-2 w-1/2">
@@ -192,25 +202,25 @@ export default function Locations() {
                     </Button>
                 </div>
             </div>
-            <div className="w-full grid grid-cols-12 grid-rows-auto gap-4 locations-grid">
+            <div className="w-full grid grid-cols-12 gap-4 locations-grid">
                 {
                     locations.map(location => {
-                        var key : string = location.name || "Unnamed Room"
+                        let key : string = location.name || "Unnamed Room"
                         const Icon = getIconForRoom(key)
                         const containersForLocation = getContainersForLocation(location.id)
-                        const colSpan = getColspanFromItems((containersForLocation.length)*2).toString() // TODO: change to itemcount later
-                        const rowSpan = getRowspanFromItems((containersForLocation.length)*2).toString() // TODO: change to itemcount later
+                        const itemsForLocation = getItemsForLocation(location.id)
+                        const colSpan = getColspanFromItems(location.item_count).toString()
                         return (
                             <Dialog key={key}>
-                                    <Card className={`location-col-span-${colSpan} location-row-span-${rowSpan} flex flex-col min-w-40`}>
+                                    <Card className={`location-col-span-${colSpan} flex flex-col min-w-40 aspect-square`}>
                                         <CardHeader className="flex flex-row justify-between items-center">
                                             <CardTitle>{key}</CardTitle>
                                             <Icon className="w-8 h-8"/>
                                         </CardHeader>
                                         <CardContent>
                                             <ul>
-                                                <li>{`0 items`}</li>
                                                 <li>{`${containersForLocation.length} container(s)`}</li>
+                                                <li>{`${location.item_count} item(s)`}</li>
                                             </ul>
                                         </CardContent>
                                         <CardFooter className='mt-auto flex justify-between'>
@@ -235,7 +245,7 @@ export default function Locations() {
                                                     <p className="text-sm text-muted-foreground mb-4">
                                                         add a new container to <span className="text-orange-500">{location.name}</span>
                                                     </p>
-                                                    <form className="flex flex-col gap-2 justify-center" onSubmit={(e) =>addContainerToLocation(e, location.id)}>
+                                                    <form className="flex flex-col gap-2 justify-center" onSubmit={(e) =>addContainerToLocation(e, location.id.toString())}>
                                                         <Input
                                                             placeholder="container name"
                                                             className="w-full mb-2"

@@ -45,19 +45,19 @@ export default function Home() {
   }, [user])
 
   async function loadSuggestions() {
-    let response1 = await getLocations(user?.id)
+    let response1 = await getLocations(user?.id ?? "")
     if(response1.success && response1.data) {
       setLocations([...response1.data])
       setLocationSuggestions([...response1.data])
     }
 
-    let response2 = await getAllContainers(user?.id)
+    let response2 = await getAllContainers(user?.id ?? "")
     if(response2.success && response2.data) {
       setContainers([...response2.data])
       setContainerSuggestions([...response2.data])
     }
 
-    let response3 = await getCategoriesForUser(user?.id)
+    let response3 = await getCategoriesForUser(user?.id ?? "")
     if(response3.success && response3.data) {
       setCategories([...response3.data])
       setCategorySuggestions([...response3.data])
@@ -77,7 +77,7 @@ export default function Home() {
 
   const delimiter: string = "/"
 
-  var animations1 = {
+  let animations1 = {
     hidden: {
       opacity: 0,
       y: 10,
@@ -94,7 +94,7 @@ export default function Home() {
     }
   };
 
-  var animations2 = {
+  let animations2 = {
     hidden: {
       opacity: 0,
       y: 10,
@@ -249,7 +249,7 @@ export default function Home() {
 
     const loadingToastID = toast.loading(`generating new categories, locations and containers`, { duration: 300 })
     if(newCategoryName.length > 1) {
-        let response1 = await addCategory(newCategoryName, user?.id)
+        let response1 = await addCategory(newCategoryName, user?.id ?? "")
         if(response1.success && response1.data) {
           toast.success(`created category ${newCategoryName}`)
           newCategoryID = response1.data[0].id
@@ -260,7 +260,7 @@ export default function Home() {
     }
 
     if(newLocationName.length > 1) {
-      let response2 = await addLocation(newLocationName, user?.id)
+      let response2 = await addLocation(newLocationName, user?.id ?? "")
       if(response2.success && response2.data) {
         toast.success(`created location ${newLocationName}`)
         newLocationID = response2.data[0].id
@@ -272,7 +272,7 @@ export default function Home() {
     }
 
     if(newContainerName.length > 1) {
-      let response3 = await addContainer(newContainerName, locationID, user?.id)
+      let response3 = await addContainer(newContainerName, locationID, user?.id ?? "")
       if(response3.success && response3.data) {
         toast.success(`created container ${newContainerName}`)
         newContainerID = response3.data[0].id
@@ -306,7 +306,7 @@ export default function Home() {
       }
 
       const loadingToastID = toast.loading(`adding item to the database`, { duration: 300 })
-      const response = await additem(newItem, user?.id)
+      const response = await additem(newItem, user?.id ?? "")
       if(response.success && response.data) {
         toast.dismiss(loadingToastID)
         toast.success(`item added to the database`)

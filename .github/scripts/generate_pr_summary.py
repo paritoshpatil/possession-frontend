@@ -6,7 +6,10 @@ from github import Github
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 REPO_NAME = os.getenv("GITHUB_REPOSITORY")
-PR_NUMBER = os.getenv("GITHUB_EVENT_NUMBER")
+GITHUB_REF = os.getenv("GITHUB_REF")
+
+# Extract PR number from GITHUB_REF
+PR_NUMBER = int(re.search(r"refs/pull/(\d+)/merge", GITHUB_REF).group(1))
 
 # Initialize GitHub API
 g = Github(GITHUB_TOKEN)

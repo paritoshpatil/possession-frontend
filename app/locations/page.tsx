@@ -147,7 +147,7 @@ export default function Locations() {
     return (
         <main className='w-screen h-screen items-main bg-muted/40 overflow-y-auto'>
             <div className="flex flex-row justify-between items-center w-full mb-8">
-                <h1 className="text-5xl text-foreground font-bold mb-4">Locations</h1>
+                <h1 className="text-5xl text-foreground font-bold mb-4">Rooms</h1>
                 <div className="flex flex-row justify-end items-center gap-2 w-1/2">
                     <motion.div
                         initial={{

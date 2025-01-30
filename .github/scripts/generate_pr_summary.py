@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from github import Github
 
@@ -14,7 +15,7 @@ PR_NUMBER = int(re.search(r"refs/pull/(\d+)/merge", GITHUB_REF).group(1))
 # Initialize GitHub API
 g = Github(GITHUB_TOKEN)
 repo = g.get_repo(REPO_NAME)
-pr = repo.get_pull(int(PR_NUMBER))
+pr = repo.get_pull(PR_NUMBER)
 
 # Get PR changes
 files = pr.get_files()

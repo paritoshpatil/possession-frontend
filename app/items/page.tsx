@@ -51,7 +51,7 @@ export default function Items() {
 		<main className='w-screen h-screen items-main bg-muted/40'>
 			<Dialog>
 			<div className="flex flex-row justify-between items-center">
-				<h1 className="text-5xl text-foreground font-bold mb-4">Items</h1>
+				<h1 className="text-5xl text-foreground font-bold mb-4">Things</h1>
 				<DialogTrigger asChild>
 					<Button className="mb-4" variant="default">
 						<LucidePlus className="w-5 h-5 mr-2"/>

@@ -1,0 +1,57 @@
+name: PR Summary Generator
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create package.json and install dependencies
+        run: |
+          echo '{"type": "module"}' > package.json
+          npm install openai@^4.0.0
+
+      - name: Generate and Post Summary
+        uses: actions/github-script@v7
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          script: |
+            const path = require('path');
+            const workspace = process.env.GITHUB_WORKSPACE;
+            
+            // Import the summary generator from the workspace directory
+            const { generateSummary } = await import(path.join(workspace, '.github/scripts/generate-summary.js'));
+            
+            try {
+              console.log('Fetching PR diff...');
+              const diff = await exec.getExecOutput('git diff origin/main...HEAD', [], {
+                silent: true
+              });
+
+              if (!diff.stdout.trim()) {
+                console.log('No changes detected in the PR');
+                return;
+              }
+
+              console.log('Generating and posting summary...');
+              await generateSummary(diff.stdout, process.env.OPENAI_API_KEY, github, context);
+              console.log('Summary posted successfully!');
+            } catch (error) {
+              console.error('Error in PR Summary Generator:', error);
+              throw error;
+            }

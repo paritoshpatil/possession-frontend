@@ -48,6 +48,9 @@ jobs:
                 return;
               }
 
+              console.log("diff: ")
+              console.log(diff.stdout)
+
               console.log('Generating and posting summary...');
               await generateSummary(diff.stdout, process.env.OPENAI_API_KEY, github, context);
               console.log('Summary posted successfully!');

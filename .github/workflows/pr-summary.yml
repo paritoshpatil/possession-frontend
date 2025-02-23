@@ -49,8 +49,8 @@ jobs:
             }')
           echo "summary=$(echo $RESPONSE | jq -r '.choices[0].message.content')" >> $GITHUB_ENV
 
-        - name: Debug OpenAI Response
-          run: echo "$RESPONSE"
+      - name: Debug OpenAI Response
+        run: echo "$RESPONSE"
 
 
       - name: Comment on PR

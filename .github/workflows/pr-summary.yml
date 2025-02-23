@@ -30,6 +30,7 @@ jobs:
       - name: Get PR diff
         run: |
           git diff HEAD^ > pr_diff.txt
+          cat pr_diff.txt
 
       - name: Summarize with OpenAI
         id: summarize

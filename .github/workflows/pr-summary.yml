@@ -44,7 +44,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d @- <<EOF
             {
-              "model": "gpt-4-turbo",
+              "model": "gpt-4",
               "messages": [
                 {"role": "system", "content": "Summarize the following Git diff changes in a concise, high-level way:"},
                 {"role": "user", "content": $DIFF}
